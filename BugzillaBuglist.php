@@ -46,6 +46,7 @@ function efBugzillaBuglist()
 function efRenderBugzillaBuglist($content, $args, $parser)
 {
     global $egBugzillaBuglistUsers, $egBugzillaBuglistUrl, $egBugzillaBuglistCacheTime;
+    $parser->disableCache();
     $username = $args['user'];
     $query = $args['query'];
     wfLoadExtensionMessages('BugzillaBuglist');
