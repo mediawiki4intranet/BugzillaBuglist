@@ -102,11 +102,18 @@ function efRenderBugzillaBuglist($content, $args, $parser)
         /* Fetch page content */
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($curl, CURLOPT_HEADER, 1);
         curl_setopt($curl, CURLOPT_URL, $url . 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query));
         curl_setopt($curl, CURLOPT_HTTPHEADER, array($cookie));
         $html = curl_exec($curl);
         if (($code = curl_getinfo($curl, CURLINFO_HTTP_CODE)) != 200)
             return wfMsgNoTrans('buglist-http-error', $code);
+        list($header, $html) = explode("\n\n", $html, 2);
+        if (preg_match('#Set-Cookie:\s*Bugzilla_login=X#is', $header))
+        {
+            $cache->delete($authkey);
+            return efRenderBugzillaBuglist($content, $args, $parser);
+        }
         /* Clean HTML code */
         // extract body
         preg_match('#<body[^<>]*>(.*)</body#is', $html, $m);
