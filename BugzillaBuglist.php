@@ -2,7 +2,8 @@
 
 /**
  * Add a <buglist user="" query="" /> tag for inserting
- * Bugzilla bug lists into wiki pages.
+ * Bugzilla bug lists into wiki pages. Also add parser function:
+ * {{#buglist|user|query}}.
  *
  * Configuration:
  * $egBugzillaBuglistUsers = array(
@@ -28,7 +29,9 @@ $wgExtensionCredits['parserhook'][] = array(
     'author'  => 'Vitaliy Filippov',
     'version' => '0.9a',
 );
+$wgHooks['LanguageGetMagic'][] = 'efBugzillaBuglistLanguageGetMagic';
 
+/* Configuration: */
 if (!$egBugzillaBuglistUsers)
     $egBugzillaBuglistUsers = array();
 if (!$egBugzillaBuglistCacheTime)
@@ -36,13 +39,29 @@ if (!$egBugzillaBuglistCacheTime)
 if (!$egBugzillaBuglistUrl)
     $egBugzillaBuglistUrl = '';
 
+/* Add magic word for parser function */
+function efBugzillaBuglistLanguageGetMagic(&$magicWords, $langCode)
+{
+    $magicWords['buglist'] = array(0, 'buglist');
+    return true;
+}
+
+/* Extension setup function */
 function efBugzillaBuglist()
 {
     global $wgParser;
     $wgParser->setHook('buglist', 'efRenderBugzillaBuglist');
+    $wgParser->setFunctionHook('buglist', 'efRenderBugzillaBuglistPF');
 }
 
 /* Parser function, returns wiki-text */
+function efRenderBugzillaBuglistPF(&$parser, $user, $query)
+{
+    $args = array('user' => $user, 'query' => $query);
+    return efRenderBugzillaBuglist('', $args, $parser);
+}
+
+/* Tag function, returns wiki-text */
 function efRenderBugzillaBuglist($content, $args, $parser)
 {
     global $egBugzillaBuglistUsers, $egBugzillaBuglistUrl, $egBugzillaBuglistCacheTime;
