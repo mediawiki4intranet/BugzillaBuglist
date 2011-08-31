@@ -32,11 +32,11 @@ $wgExtensionCredits['parserhook'][] = array(
 $wgHooks['LanguageGetMagic'][] = 'efBugzillaBuglistLanguageGetMagic';
 
 /* Configuration: */
-if (!$egBugzillaBuglistUsers)
+if (!isset($egBugzillaBuglistUsers))
     $egBugzillaBuglistUsers = array();
-if (!$egBugzillaBuglistCacheTime)
+if (!isset($egBugzillaBuglistCacheTime))
     $egBugzillaBuglistCacheTime = 10;
-if (!$egBugzillaBuglistUrl)
+if (!isset($egBugzillaBuglistUrl))
     $egBugzillaBuglistUrl = '';
 
 /* Add magic word for parser function */
