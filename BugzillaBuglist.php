@@ -150,7 +150,10 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     }
     /* Protect the HTML code from being escaped */
     $marker = $parser->mUniqPrefix."-buglist-" . sprintf('%08X', $parser->mMarkerIndex++) . Parser::MARKER_SUFFIX;
-    $parser->mStripState->nowiki->setPair($marker, $html);
+    if (method_exists($parser->mStripState, 'addNoWiki'))
+        $parser->mStripState->addNoWiki($marker, $html);
+    else
+        $parser->mStripState->nowiki->setPair($marker, $html);
     $parser->mOutput->addHeadItem("<link rel='stylesheet' type='text/css' href='$url/skins/standard/buglist.css' />");
     return $marker;
 }
