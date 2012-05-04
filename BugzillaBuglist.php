@@ -22,13 +22,13 @@
 if (!defined('MEDIAWIKI'))
     die("This file is an extension to the MediaWiki software and cannot be used standalone");
 
-$wgExtensionFunctions[] = 'efBugzillaBuglist';
 $wgExtensionMessagesFiles['BugzillaBuglist'] = dirname(__FILE__).'/BugzillaBuglist.i18n.php';
 $wgExtensionCredits['parserhook'][] = array(
     'name'    => 'Bugzilla Buglist',
     'author'  => 'Vitaliy Filippov',
     'version' => '0.9a',
 );
+$wgHooks['ParserFirstCallInit'][] = 'efBugzillaBuglist';
 $wgHooks['LanguageGetMagic'][] = 'efBugzillaBuglistLanguageGetMagic';
 
 /* Configuration: */
@@ -46,12 +46,12 @@ function efBugzillaBuglistLanguageGetMagic(&$magicWords, $langCode)
     return true;
 }
 
-/* Extension setup function */
-function efBugzillaBuglist()
+/* Registers parser hooks */
+function efBugzillaBuglist($parser)
 {
-    global $wgParser;
-    $wgParser->setHook('buglist', 'efRenderBugzillaBuglist');
-    $wgParser->setFunctionHook('buglist', 'efRenderBugzillaBuglistPF');
+    $parser->setHook('buglist', 'efRenderBugzillaBuglist');
+    $parser->setFunctionHook('buglist', 'efRenderBugzillaBuglistPF');
+    return true;
 }
 
 /* Parser function, returns wiki-text */
