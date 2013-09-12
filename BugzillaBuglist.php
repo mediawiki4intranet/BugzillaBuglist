@@ -68,7 +68,6 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     $parser->disableCache();
     $username = $args['user'];
     $query = $args['query'];
-    wfLoadExtensionMessages('BugzillaBuglist');
     if (!$egBugzillaBuglistUrl)
         return wfMsgNoTrans('buglist-no-url');
     if (!$egBugzillaBuglistUsers[$username] ||
