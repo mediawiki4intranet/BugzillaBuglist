@@ -3,7 +3,11 @@
 /**
  * Add a <buglist user="" query="" /> tag for inserting
  * Bugzilla bug lists into wiki pages. Also add parser function:
- * {{#buglist|user|query}}.
+ * {{#buglist:user|query}}.
+ *
+ * Add a <bugattachments user="" query="bugid=" /> tag for inserting
+ * Bugzilla bug lists into wiki pages. Also add parser function:
+ * {{#bugattachments:user|query}}.
  *
  * Configuration:
  * $egBugzillaBuglistUsers = array(
@@ -43,6 +47,7 @@ if (!isset($egBugzillaBuglistUrl))
 function efBugzillaBuglistLanguageGetMagic(&$magicWords, $langCode)
 {
     $magicWords['buglist'] = array(0, 'buglist');
+    $magicWords['bugattachments'] = array(0, 'bugattachments');
     return true;
 }
 
@@ -51,6 +56,8 @@ function efBugzillaBuglist($parser)
 {
     $parser->setHook('buglist', 'efRenderBugzillaBuglist');
     $parser->setFunctionHook('buglist', 'efRenderBugzillaBuglistPF');
+    $parser->setHook('bugattachments', 'efRenderBugzillaBuglist');
+    $parser->setFunctionHook('bugattachments', 'efRenderBugzillaBuglistPF');
     return true;
 }
 
@@ -67,7 +74,7 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     global $egBugzillaBuglistUsers, $egBugzillaBuglistUrl, $egBugzillaBuglistCacheTime;
     $parser->disableCache();
     $username = $args['user'];
-    $query = $args['query'];
+    $query = isset($args['query']) ? $args['query'] : false ;
     if (!$egBugzillaBuglistUrl)
         return wfMsgNoTrans('buglist-no-url');
     if (!$egBugzillaBuglistUsers[$username] ||
@@ -122,7 +129,7 @@ function efRenderBugzillaBuglist($content, $args, $parser)
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($curl, CURLOPT_HEADER, 1);
-        curl_setopt($curl, CURLOPT_URL, $url . 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query));
+        curl_setopt($curl, CURLOPT_URL, $url . (($bugid = preg_replace("/bugid=/i", "", $query)) ? 'attachment.cgi?bugid='.urlencode($bugid).'&action=viewall&format=simple' : 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query)));
         curl_setopt($curl, CURLOPT_HTTPHEADER, array($cookie));
         $html = curl_exec($curl);
         if (($code = curl_getinfo($curl, CURLINFO_HTTP_CODE)) != 200)
@@ -156,3 +163,7 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     $parser->mOutput->addHeadItem("<link rel='stylesheet' type='text/css' href='$url/skins/standard/buglist.css' />");
     return $marker;
 }
+
+
+
+
