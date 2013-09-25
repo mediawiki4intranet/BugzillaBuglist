@@ -129,7 +129,7 @@ function efRenderBugzillaBuglist($content, $args, $parser)
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($curl, CURLOPT_HEADER, 1);
-        curl_setopt($curl, CURLOPT_URL, $url . (($bugid = preg_replace("/bugid=/i", "", $query)) ? 'attachment.cgi?bugid='.urlencode($bugid).'&action=viewall&format=simple' : 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query)));
+        curl_setopt($curl, CURLOPT_URL, $url . ((preg_match("/bugid=/i", $query)) ? 'attachment.cgi?bugid='.urlencode(preg_replace("/bugid=/i", "", $query)).'&action=viewall&format=simple' : 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query)));
         curl_setopt($curl, CURLOPT_HTTPHEADER, array($cookie));
         $html = curl_exec($curl);
         if (($code = curl_getinfo($curl, CURLINFO_HTTP_CODE)) != 200)
