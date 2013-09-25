@@ -5,7 +5,7 @@
  * Bugzilla bug lists into wiki pages. Also add parser function:
  * {{#buglist:user|query}}.
  *
- * Add a <bugattachments user="" query="bugid=" /> tag for inserting
+ * Add a <bugattachments user="" query="{bugid}" /> tag for inserting
  * Bugzilla bug lists into wiki pages. Also add parser function:
  * {{#bugattachments:user|query}}.
  *
@@ -56,16 +56,29 @@ function efBugzillaBuglist($parser)
 {
     $parser->setHook('buglist', 'efRenderBugzillaBuglist');
     $parser->setFunctionHook('buglist', 'efRenderBugzillaBuglistPF');
-    $parser->setHook('bugattachments', 'efRenderBugzillaBuglist');
-    $parser->setFunctionHook('bugattachments', 'efRenderBugzillaBuglistPF');
+
+    $parser->setHook('bugattachments', 'efRenderBugzillaBugattachments');
+    $parser->setFunctionHook('bugattachments', 'efRenderBugzillaBugattachmentsPF');
     return true;
 }
 
 /* Parser function, returns wiki-text */
-function efRenderBugzillaBuglistPF(&$parser, $user, $query)
+function efRenderBugzillaBuglistPF($parser, $user, $query)
 {
     $args = array('user' => $user, 'query' => $query);
     return efRenderBugzillaBuglist('', $args, $parser);
+}
+
+/* Show attachment of the bug */
+function efRenderBugzillaBugattachmentsPF($parser, $user, $query)
+{
+    $args = array('user' => $user, 'query' => $query, 'attachments' => true);
+    return efRenderBugzillaBuglist('', $args, $parser);
+}
+
+function efRenderBugzillaBugattachments($content, $args, $parser)
+{
+    return efRenderBugzillaBuglist($content, $args + array('attachments' => true), $parser);
 }
 
 /* Tag function, returns wiki-text */
@@ -75,6 +88,7 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     $parser->disableCache();
     $username = $args['user'];
     $query = isset($args['query']) ? $args['query'] : false ;
+    $attachments = isset($args['attachments']) ? $args['attachments'] : false ;
     if (!$egBugzillaBuglistUrl)
         return wfMsgNoTrans('buglist-no-url');
     if (!$egBugzillaBuglistUsers[$username] ||
@@ -129,7 +143,10 @@ function efRenderBugzillaBuglist($content, $args, $parser)
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($curl, CURLOPT_HEADER, 1);
-        curl_setopt($curl, CURLOPT_URL, $url . ((preg_match("/bugid=/i", $query)) ? 'attachment.cgi?bugid='.urlencode(preg_replace("/bugid=/i", "", $query)).'&action=viewall&format=simple' : 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query)));
+        curl_setopt($curl, CURLOPT_URL, $url . (($attachments)
+            ? 'attachment.cgi?bugid='.urlencode($query).'&action=viewall&format=simple'
+            : 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query))
+        );
         curl_setopt($curl, CURLOPT_HTTPHEADER, array($cookie));
         $html = curl_exec($curl);
         if (($code = curl_getinfo($curl, CURLINFO_HTTP_CODE)) != 200)
