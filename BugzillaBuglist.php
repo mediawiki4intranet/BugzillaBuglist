@@ -1,15 +1,20 @@
 <?php
 
 /**
- * Add a <buglist user="" query="" /> tag for inserting
- * Bugzilla bug lists into wiki pages. Also add parser function:
- * {{#buglist:user|query}}.
+ * This extension provides buglist and bug attachment list Bugzilla integration
+ * (bug attachment lists work only with Bugzilla4Intranet).
  *
- * Add a <bugattachments user="" query="{bugid}" /> tag for inserting
- * Bugzilla bug lists into wiki pages. Also add parser function:
- * {{#bugattachments:user|query}}.
+ * To insert bug list, use a tag: <buglist user="" query="" />
+ * or a parser function: {{#buglist:user|query}}
+ *
+ * To insert attachment list, use: <bugattachments user="" bugid="{bugid}" />
+ * or a parser function: {#bugattachments:user|bugid}}
+ *
+ * Lists are fetched from under one of configured user(s) and cached for some time
+ * in the wiki object cache.
  *
  * Configuration:
+ *
  * $egBugzillaBuglistUsers = array(
  *   'alias' => array('login' => BUGZILLA LOGIN, 'password' => BUGZILLA PASSWORD),
  * );
@@ -19,12 +24,14 @@
  * @package MediaWiki
  * @subpackage Extensions
  * @author Vitaliy Filippov <vitalif@mail.ru>
- * @copyright (c) 2010 Vitaliy Filippov
+ * @copyright (c) 2010-2013 Vitaliy Filippov
  * @licence GNU General Public Licence 2.0 or later
  */
 
 if (!defined('MEDIAWIKI'))
+{
     die("This file is an extension to the MediaWiki software and cannot be used standalone");
+}
 
 $wgExtensionMessagesFiles['BugzillaBuglist'] = dirname(__FILE__).'/BugzillaBuglist.i18n.php';
 $wgExtensionCredits['parserhook'][] = array(
@@ -35,13 +42,10 @@ $wgExtensionCredits['parserhook'][] = array(
 $wgHooks['ParserFirstCallInit'][] = 'efBugzillaBuglist';
 $wgHooks['LanguageGetMagic'][] = 'efBugzillaBuglistLanguageGetMagic';
 
-/* Configuration: */
-if (!isset($egBugzillaBuglistUsers))
-    $egBugzillaBuglistUsers = array();
-if (!isset($egBugzillaBuglistCacheTime))
-    $egBugzillaBuglistCacheTime = 10;
-if (!isset($egBugzillaBuglistUrl))
-    $egBugzillaBuglistUrl = '';
+/* Default configuration */
+$egBugzillaBuglistUsers = array();
+$egBugzillaBuglistCacheTime = 10;
+$egBugzillaBuglistUrl = '';
 
 /* Add magic word for parser function */
 function efBugzillaBuglistLanguageGetMagic(&$magicWords, $langCode)
@@ -78,7 +82,10 @@ function efRenderBugzillaBugattachmentsPF($parser, $user, $query)
 
 function efRenderBugzillaBugattachments($content, $args, $parser)
 {
-    return efRenderBugzillaBuglist($content, $args + array('attachments' => true), $parser);
+    return efRenderBugzillaBuglist($content, $args + array(
+        'query' => isset($args['bugid']) ? $args['bugid'] : NULL,
+        'attachments' => true
+    ), $parser);
 }
 
 /* Tag function, returns wiki-text */
@@ -87,17 +94,23 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     global $egBugzillaBuglistUsers, $egBugzillaBuglistUrl, $egBugzillaBuglistCacheTime;
     $parser->disableCache();
     $username = $args['user'];
-    $query = isset($args['query']) ? $args['query'] : false ;
-    $attachments = isset($args['attachments']) ? $args['attachments'] : false ;
+    $query = isset($args['query']) ? $args['query'] : false;
+    $attachments = isset($args['attachments']) ? $args['attachments'] : false;
     if (!$egBugzillaBuglistUrl)
+    {
         return wfMsgNoTrans('buglist-no-url');
+    }
     if (!$egBugzillaBuglistUsers[$username] ||
         !$egBugzillaBuglistUsers[$username]['login'] ||
         !$egBugzillaBuglistUsers[$username]['password'])
+    {
         return wfMsgNoTrans('buglist-invalid-username', $username, $query);
+    }
     $url = $egBugzillaBuglistUrl;
     if (substr($url, -1) != '/')
+    {
         $url .= '/';
+    }
     $cache = wfGetCache(CACHE_ANYTHING);
     $contentkey = wfMemcKey('bugzilla_buglist', $username, $query);
     if (!($html = $cache->get($contentkey)))
@@ -143,14 +156,16 @@ function efRenderBugzillaBuglist($content, $args, $parser)
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($curl, CURLOPT_HEADER, 1);
-        curl_setopt($curl, CURLOPT_URL, $url . (($attachments)
+        curl_setopt($curl, CURLOPT_URL, $url . ($attachments
             ? 'attachment.cgi?bugid='.urlencode($query).'&action=viewall&format=simple'
             : 'buglist.cgi?format=simple&cmdtype=runnamed&namedcmd='.urlencode($query))
         );
         curl_setopt($curl, CURLOPT_HTTPHEADER, array($cookie));
         $html = curl_exec($curl);
         if (($code = curl_getinfo($curl, CURLINFO_HTTP_CODE)) != 200)
+        {
             return wfMsgNoTrans('buglist-http-error', $code);
+        }
         list($header, $html) = explode("\n\n", $html, 2);
         if (preg_match('#Set-Cookie:\s*Bugzilla_login=X#is', $header))
         {
@@ -174,13 +189,13 @@ function efRenderBugzillaBuglist($content, $args, $parser)
     /* Protect the HTML code from being escaped */
     $marker = $parser->mUniqPrefix."-buglist-" . sprintf('%08X', $parser->mMarkerIndex++) . Parser::MARKER_SUFFIX;
     if (method_exists($parser->mStripState, 'addNoWiki'))
+    {
         $parser->mStripState->addNoWiki($marker, $html);
+    }
     else
+    {
         $parser->mStripState->nowiki->setPair($marker, $html);
+    }
     $parser->mOutput->addHeadItem("<link rel='stylesheet' type='text/css' href='$url/skins/standard/buglist.css' />");
     return $marker;
 }
-
-
-
-
